@@ -1,5 +1,6 @@
 import re
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import db
 from app.models.user import User
 from app.models.book import Book
@@ -12,46 +13,6 @@ user_bp = Blueprint("users", __name__)
 
 
 #--------- USER VALIDATION HELPERS ---------
-
-#method to validate an user
-
-def validate_user_create(data):
-    errors = {}
-    
-    name_pattern = re.compile(r"^[A-Za-z ]+$")
-    
-    if not data:
-        errors["data"] = "User data is required"
-        return errors
-    
-    #first_name
-    
-    if "first_name" not in data or not data["first_name"]:
-        errors["first_name"] = "First name is required"
-        
-    elif not name_pattern.match(data["first_name"]):
-        errors["first_name"] = "First name should only contain alphabets and spaces"
-        
-    #last_name
-        
-    if "last_name" not in data or not data["last_name"]:
-        errors["last_name"] = "Last name is required"
-        
-    elif not name_pattern.match(data["last_name"]):
-        errors["last_name"] = "Last name should only contain alphabets and spaces"
-        
-    #email
-    
-    if "email_id" not in data or not data["email_id"]:
-        errors["email_id"] = "email id is required"
-    
-    else:
-        try:
-            validate_email(data["email_id"])
-        except EmailNotValidError as e:
-            errors["email_id"] = str(e)
-        
-    return errors
 
 #method to validate user update information
 
@@ -130,27 +91,6 @@ def validate_book_create(data):
 
 #--------- API USER ENDPOINTS ------------
 
-
-#Add an user to the database
-    
-@user_bp.route("/", methods=["POST"])
-def add_user():
-    data = request.get_json()
-    
-    errors = validate_user_create(data)
-    
-    if errors:
-        return jsonify({"Error": "Validation failed", "Details": errors}), 400
-    
-    
-    user = User(first_name = data["first_name"], 
-                last_name = data["last_name"], 
-                email_id = data["email_id"])
-    db.session.add(user)
-    db.session.commit()
-    
-    return jsonify(user.to_dict()), 201
-
 #Get all the users in the database
 
 @user_bp.route("/", methods=["GET"])
@@ -158,16 +98,40 @@ def get_users():
     users = User.query.all()
     return jsonify([user.to_dict() for user in users])
 
-#Get an user by id
+#Get an user by id, protected route user must have a jwt token to access this route
 
 @user_bp.route("/<int:user_id>", methods=["GET"])
+@jwt_required()
 def get_user(user_id):
-    user = User.query.get(user_id)
     
-    if not user:
+    #get the user who requested this route
+    
+    requesting_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    
+    requesting_user = User.query.get(requesting_user_id)
+    
+    if not requesting_user:
         return jsonify({"Error": "User Not Found"}), 404
     
-    return jsonify(user.to_dict())
+    #if requesting user is admin then provide the user info
+    
+    if requesting_user.role == "admin":
+        requested_user = User.query.get(user_id)
+        
+        if not requested_user:
+            return jsonify({"Error": "User Not Found"}), 404
+        
+        return jsonify(requested_user.to_dict()), 200
+    
+    #if a user is not admin and is requesting details of other user block that
+    
+    if requesting_user.id != user_id:
+        return jsonify({"Error": "Unauthorized Access"}), 403
+    
+    #if a user is requesting is own details then retur the details
+    
+    return jsonify(requesting_user.to_dict()), 200
 
 #Add a book to a user
 
