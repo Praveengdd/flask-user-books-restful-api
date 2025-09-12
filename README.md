@@ -8,7 +8,8 @@ This API manages **Users** and their **Books** with a one-to-many relationship:
 ---
 
 ## 🚀 Features
-- Add and retrieve users
+- Registration and Login for Users
+- Protected route to access user by id
 - update user details
 - delete an user
 - Add books for a specific user
@@ -31,9 +32,10 @@ This API manages **Users** and their **Books** with a one-to-many relationship:
 ## 📌 API Endpoints
 
 ### Users
-- `POST /users` → Create a new user  
+- `POST /register` → User Registration
+- `POST /login` → User Login   
 - `GET /users` → Get all users  
-- `GET /users/<id>` → Get a single user by ID
+- `GET /users/<id>` → Get a single user by ID (protected route)
 - `PUT /users/<id>` → Update details of a user by ID
 - `DELETE /users/<id>` → Delete a user by ID
 
@@ -57,7 +59,7 @@ This API manages **Users** and their **Books** with a one-to-many relationship:
 
 ✅ Pagination and Filtering (API Design Advancement)
 
-🔜 Add authentication (JWT-based login/signup)
+🚧 Add authentication (JWT-based login/signup) ( in progress )
 
 🔜 Deploy to cloud (Render/Heroku/AWS)
 
