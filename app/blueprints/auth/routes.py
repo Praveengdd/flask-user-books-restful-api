@@ -164,7 +164,7 @@ def login():
     
     
     #access token and refresh token creation
-    #remember identity must contain which can be casted to string
+    #remember identity must contain which can be casted to string Eg. like username or id
     
     access_token = create_access_token(identity=str(existing_user.id), additional_claims={"role": existing_user.role})
     refresh_token = create_refresh_token(identity=str(existing_user.id), additional_claims={"role": existing_user.role})
