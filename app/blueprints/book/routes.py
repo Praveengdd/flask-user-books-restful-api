@@ -1,7 +1,9 @@
 import re
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app import db
 from app.models.book import Book
+from app.models.user import User
 
 #creating book blueprint
 
@@ -51,7 +53,18 @@ def validate_book_update(data):
 #Get all the books, [Also Enhanced now with Paging and Filtering]
 
 @book_bp.route("/", methods=["GET"])
+@jwt_required()
 def get_books():
+    
+    requesting_user_id = int(get_jwt_identity())
+    requesting_user = User.query.get(requesting_user_id)
+    claims = get_jwt()
+    
+    if not requesting_user:
+        return jsonify({"Error": "User not Found"}), 404
+    
+    if claims["role"].lower() != "admin":
+        return jsonify({"Error": "Unauthorized Access"}), 403
     
     #filtering
     
@@ -81,54 +94,108 @@ def get_books():
         "total": paginated.total,
         "total pages": paginated.pages,
         "books": books
-    })
+    }), 200
 
 #Get a book by id
 
 @book_bp.route("/<int:book_id>", methods=["GET"])
+@jwt_required()
 def get_book(book_id):
-    book = Book.query.get(book_id)
-    if book:
-        return jsonify(book.to_dict())
     
-    return jsonify({"Error": "Book Not Found"}), 404
-
-
-#update Name and Author of a book
-
-@book_bp.route("/<int:book_id>", methods=["PUT"])
-def update_book(book_id):
+    requesting_user_id = int(get_jwt_identity())
+    requesting_user = User.query.get(requesting_user_id)
+    claims = get_jwt()
+    
+    if not requesting_user:
+        return jsonify({"Error": "User Not Found"}), 404
+    
+    if claims["role"].lower() == "admin":
+        book = Book.query.get(book_id)
+        
+        if not book:
+            return jsonify({"Error": "Book Not Found"}), 404
+        
+        return jsonify(book.to_dict()), 200
     
     book = Book.query.get(book_id)
     
     if not book:
         return jsonify({"Error": "Book Not Found"}), 404
     
+    if requesting_user_id != book.user_id:
+        return jsonify({"Error": "Unauthorized Access"}), 403
+    
+    return jsonify(book.to_dict()), 200
+    
+    
+
+
+#update Name and Author of a book
+
+@book_bp.route("/<int:book_id>", methods=["PUT"])
+@jwt_required()
+def update_book(book_id):
+    requesting_user_id = int(get_jwt_identity())
+    requesting_user = User.query.get(requesting_user_id)
+    
+    if not requesting_user:
+        return jsonify({"Error": "User Not Found"}), 404
+    
+    book = Book.query.get(book_id)
+    
+    if not book:
+        return jsonify({"Error": "Book Not Found"}), 404
+    
+    if book.user_id != requesting_user_id:
+        return jsonify({"Error": "Unauthorized Access"}), 403
+    
     data = request.get_json()
     errors = validate_book_update(data)
     
     if errors:
-        return jsonify({"Error": "Validation Failed", "Details": errors})
+        return jsonify({"Error": "Validation Failed", "Details": errors}), 400
     
     book.Name = data.get("Name", book.Name)
     book.Author = data.get("Author", book.Author)
     
     db.session.commit()
             
-    return jsonify(book.to_dict())
+    return jsonify({"Message": "Book Details Updated Successfully", "Details": book.to_dict()}), 200
 
 
 #delete a book by it's id        
     
 
 @book_bp.route("/<int:book_id>", methods=["DELETE"])
+@jwt_required()
 def delete_book(book_id):
+    requesting_user_id = int(get_jwt_identity())
+    requesting_user = User.query.get(requesting_user_id)
+    claims = get_jwt()
+    
+    if not requesting_user:
+        return jsonify({"Error": "User Not Found"}), 404
+    
+    if claims["role"].lower() == "admin":
+        book = Book.query.get(book_id)
+        
+        if not book:
+            return jsonify({"Error": "Book Not Found"}), 404
+        
+        db.session.delete(book)
+        db.session.commit()
+        
+        return jsonify({"Message": f"Book with book id {book_id} deleted successfully"}), 200
+    
     book = Book.query.get(book_id)
     
     if not book:
         return jsonify({"Error": "Book Not Found"}), 404
     
+    if requesting_user_id != book.user_id:
+        return jsonify({"Error": "Unauthorized Access"}), 403
+    
     db.session.delete(book)
     db.session.commit()
     
-    return jsonify({"message": f"Book with book id {book_id} deleted succesfully"})
+    return jsonify({"Message": f"Book with book id {book_id} deleted succesfully"}), 200
