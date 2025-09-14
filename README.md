@@ -34,20 +34,20 @@ This API manages **Users** and their **Books** with a one-to-many relationship:
 ### Users
 - `POST /register` → User Registration
 - `POST /login` → User Login   
-- `GET /users` → Get all users  
+- `GET /users` → Get all users (protected only for admin)
 - `GET /users/<id>` → Get a single user by ID (protected route)
-- `PUT /users/<id>` → Update details of a user by ID
-- `DELETE /users/<id>` → Delete a user by ID
+- `PUT /users/<id>` → Update details of a user by ID (protected for users, only users can update their details)
+- `DELETE /users/<id>` → Delete a user by ID (protected for admin and users, user can only delete themselves)
 
 ### Books (User-specific)
-- `POST /users/<id>/books` → Add a new book for a user  
-- `GET /users/<id>/books` → Get all books owned by a user  
+- `POST /users/<id>/books` → Add a new book for a user (protected only for user)
+- `GET /users/<id>/books` → Get all books owned by a user  (protected for admin and user)
 
 ### Books (Global)
-- `GET /books` → Get all books  
-- `GET /books/<id>` → Get a single book by ID  
-- `PUT /books/<id>` → Update a book (title, author)  
-- `DELETE /books/<id>` → Delete a book  
+- `GET /books` → Get all books (protected only for admin)
+- `GET /books/<id>` → Get a single book by ID (protected for admin and user)
+- `PUT /books/<id>` → Update a book (title, author)  (protected only for admin)
+- `DELETE /books/<id>` → Delete a book  (protected for user and admin)
 
 ---
 
@@ -59,7 +59,7 @@ This API manages **Users** and their **Books** with a one-to-many relationship:
 
 ✅ Pagination and Filtering (API Design Advancement)
 
-🚧 Add authentication (JWT-based login/signup) ( in progress )
+✅ Add authentication (JWT-based login/signup)
 
 🔜 Deploy to cloud (Render/Heroku/AWS)
 
